@@ -4,7 +4,7 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 
 	/**
 	 * GoCardlessConfig Module for ProcessWire
-	 * @version 0.0.3
+	 * @version 0.0.4
 	 * @summary ProcessWire module that holds keys for GoCardless API.
 	 * @icon key
 	 * @author Mark Evens
@@ -39,13 +39,20 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 	public static function getModuleInfo() {
 		return [
 			'title' => 'GoCardlessConfig',
-			'version' => '0.0.3',
+			'version' => '0.0.4',
 			'summary' => 'ProcessWire module that holds keys for GoCardless API.',
 			'icon' => 'key',
 		];
 	}
 
 	public function init() {
+	}
+
+	public function unsetPassword() {
+		$modules = $this->wire('modules');
+		$data = $modules->getConfig('GoCardlessConfig');
+		$data['password'] = '';
+		$modules->saveConfig('GoCardlessConfig', $data);
 	}
 
 	/**
@@ -75,6 +82,7 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 		$inputfields->add($f);
 
 		if($this->wire('user')->isSuperuser() && (!$session->get('hidePassword') || !$this->password || !$session->authenticate($user, $this->password))) {
+			$this->unsetPassword();
 			/* @var InputfieldText $f */
 			$f = $modules->InputfieldText;
 			$f->attr('name', 'password');
@@ -95,9 +103,7 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 		if($this->wire('user')->isSuperuser() && $session->get('showSettings') && $session->authenticate($user, $this->password)) {
 			$hide = !$session->showSettings;
 			$session->set('hidePassword', false);
-			$data = $modules->getConfig('GoCardlessConfig');
-			$data['password'] = '';
-			$modules->saveConfig('GoCardlessConfig', $data);
+			$this->unsetPassword();
 		} else {
 			$hide = true;
 		}
