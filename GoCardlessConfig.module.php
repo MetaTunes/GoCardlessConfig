@@ -4,7 +4,7 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 
 	/**
 	 * GoCardlessConfig Module for ProcessWire
-	 * @version 0.0.2
+	 * @version 0.0.3
 	 * @summary ProcessWire module that holds keys for GoCardless API.
 	 * @icon key
 	 * @author Mark Evens
@@ -39,14 +39,13 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 	public static function getModuleInfo() {
 		return [
 			'title' => 'GoCardlessConfig',
-			'version' => '0.0.2',
+			'version' => '0.0.3',
 			'summary' => 'ProcessWire module that holds keys for GoCardless API.',
 			'icon' => 'key',
 		];
 	}
 
 	public function init() {
-//		$this->wire('session')->set('password', false);
 	}
 
 	/**
@@ -62,8 +61,18 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 			$this->error('You must be a superuser to access this module');
 			return;
 		}
-		bd([$this->password, $session->hidePassword], 'password, hidePassword');
+//		bd([$this->password, $session->hidePassword], 'password, hidePassword');
 
+		/* @var InputfieldMarkup $f */
+		$f = $modules->InputfieldMarkup;
+		$f->label = 'GoCardless site links';
+		$f->value = "<a href='https://manage.gocardless.com/sign-in' target='_blank'>GoCardless dashboard</a>
+			<br/>
+			<a href='https://manage-sandbox.gocardless.com/sign-in' target='_blank'>GoCardless sandbox dashboard</a>
+			<br/>
+			<a href='https://manage-sandbox.gocardless.com/developers' target='_blank'>GoCardless sandbox developers dashboard</a>";
+
+		$inputfields->add($f);
 
 		if($this->wire('user')->isSuperuser() && (!$session->get('hidePassword') || !$this->password || !$session->authenticate($user, $this->password))) {
 			/* @var InputfieldText $f */
@@ -71,12 +80,13 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 			$f->attr('name', 'password');
 			$f->attr('type', 'password');
 			$f->label = 'Password';
-			$f->description = 'Enter the PW password for the user that is currently signed in.';
+			$f->description = 'Enter the PW password for the user that is currently signed in (must be a superuser).';
 			$f->notes = 'This is required to access the GoCardless keys in order to prevent inadvertent disclosure or amendment.';
 			$f->value = '';
 			$inputfields->add($f);
 			$session->set('showSettings', false);
 			$session->set('hidePassword', true);
+
 		} else {
 			$session->set('showSettings', true);
 		}
@@ -85,16 +95,18 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 		if($this->wire('user')->isSuperuser() && $session->get('showSettings') && $session->authenticate($user, $this->password)) {
 			$hide = !$session->showSettings;
 			$session->set('hidePassword', false);
+			$data = $modules->getConfig('GoCardlessConfig');
+			$data['password'] = '';
+			$modules->saveConfig('GoCardlessConfig', $data);
 		} else {
 			$hide = true;
 		}
 
-		bd([$hide, $session->get('hidePassword')], 'hide, hide password');
+//		bd([$hide, $session->get('hidePassword')], 'hide, hide password');
 
 		/* @var InputfieldWrapper $form */
 		$form = $modules->InputfieldWrapper;
 		$form->attr('id+name', 'gocardless_config');
-//		if($hide) $form->attr('hidden', true);
 
 		/* @var InputfieldFieldset $fs */
 		$fs = $modules->InputfieldFieldset;
