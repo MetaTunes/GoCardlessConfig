@@ -4,10 +4,9 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 
 	/**
 	 * GoCardlessConfig Module for ProcessWire
-	 * @version 0.0.1
+	 * @version 0.0.2
 	 * @summary ProcessWire module that holds keys for GoCardless API.
 	 * @icon key
-	 * @requires GroupMaster
 	 * @author Mark Evens
 	 *
 	 * This module integrates GoCardless payment services with ProcessWire, providing a configurable
