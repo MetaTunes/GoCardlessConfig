@@ -10,7 +10,7 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 	 * @author Mark Evens
 	 *
 	 * This module integrates GoCardless payment services with ProcessWire, providing a configurable
-	 * interface for managing GoCardless API keys and webhook secrets. It is designed for superusers
+	 * interface for managing GoCardless API keys and webhook secrets. It is designed for superusers (or those with gocardless_config permission)
 	 * and offers a secure way to store and access sensitive GoCardless configuration details directly
 	 * within the ProcessWire admin interface.
 	 *
@@ -24,7 +24,7 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 	 *
 	 * Configuration:
 	 * The module requires entry of GoCardless API keys and webhook secrets for both LIVE and SANDBOX
-	 * environments. Access to these settings is password protected for security. Only superusers can
+	 * environments. Access to these settings is password protected for security. Only superusers or those with gocardless_config permission can
 	 * view and modify the GoCardless configuration.
 	 *
 	 * Usage:
@@ -33,15 +33,19 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 	 *
 	 * Note:
 	 * Always ensure that your GoCardless API keys and webhook secrets are kept confidential and are
-	 * only accessible to authorized personnel.
+	 * only accessible to authorized personnel. The data in this module are only accessible in the module by superusers or those with special permission,
+	 * but anyone with access to the ProcessWire admin interface and developer tools such as Tracy Debugger can access the API keys
+	 * if they have sufficient knowledge, so bear that in mind in granting other access rights.
 	 */
 
 	public static function getModuleInfo() {
 		return [
 			'title' => 'GoCardlessConfig',
-			'version' => '0.0.4',
+			'version' => '0.0.5',
 			'summary' => 'ProcessWire module that holds keys for GoCardless API.',
 			'icon' => 'key',
+			'permission' => 'gocardless_config',
+			'permissions' => ['gocardless_config' => 'Access to the GoCardless keys'],
 		];
 	}
 
@@ -64,10 +68,6 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 		$modules = $this->wire('modules');
 		$user = $this->wire('user');
 		$session = $this->wire('session');
-		if(!$this->wire('user')->isSuperuser()) {
-			$this->error('You must be a superuser to access this module');
-			return;
-		}
 //		bd([$this->password, $session->hidePassword], 'password, hidePassword');
 
 		/* @var InputfieldMarkup $f */
@@ -81,14 +81,20 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 
 		$inputfields->add($f);
 
-		if($this->wire('user')->isSuperuser() && (!$session->get('hidePassword') || !$this->password || !$session->authenticate($user, $this->password))) {
+		$allowedUser = ($user->isSuperuser() || $user->hasPermission('gocardless_config'));
+		if(!$allowedUser) {
+			$this->error('You must be a superuser or have special permission to access this module');
+			return;
+		}
+
+		if($allowedUser && (!$session->get('hidePassword') || !$this->password || !$session->authenticate($user, $this->password))) {
 			$this->unsetPassword();
 			/* @var InputfieldText $f */
 			$f = $modules->InputfieldText;
 			$f->attr('name', 'password');
 			$f->attr('type', 'password');
 			$f->label = 'Password';
-			$f->description = 'Enter the PW password for the user that is currently signed in (must be a superuser).';
+			$f->description = 'Enter the PW password for the user that is currently signed in (must be a superuser or have special permission).';
 			$f->notes = 'This is required to access the GoCardless keys in order to prevent inadvertent disclosure or amendment.';
 			$f->value = '';
 			$inputfields->add($f);
@@ -100,7 +106,7 @@ class GoCardlessConfig extends WireData implements Module, ConfigurableModule {
 		}
 
 
-		if($this->wire('user')->isSuperuser() && $session->get('showSettings') && $session->authenticate($user, $this->password)) {
+		if($allowedUser && $session->get('showSettings') && $session->authenticate($user, $this->password)) {
 			$hide = !$session->showSettings;
 			$session->set('hidePassword', false);
 			$this->unsetPassword();
